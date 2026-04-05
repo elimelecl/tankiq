@@ -1,7 +1,7 @@
 # TankIQ: Intelligent Tank Management System
 
 <p align="center">
-  <img src="https://via.placeholder.com/400x200?text=TankIQ+Logo" width="400" alt="TankIQ Logo">
+  <img src="assets/logo.png" width="400" alt="TankIQ Logo">
 </p>
 
 <p align="center">
