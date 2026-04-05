@@ -448,6 +448,7 @@ class _MeasurementDetailScreenState extends State<MeasurementDetailScreen> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildGridItem(Icons.calendar_today, "Fecha", formattedDate),
+                _buildGridItem(Icons.label_important_outline, "Motivo", measurement['motivo'] ?? 'MOVIMIENTO'),
                 _buildGridItem(Icons.person, "Inspector", measurement['inspector'] ?? '---'),
                 _buildGridItem(Icons.engineering, "Operador", measurement['operador_nombre'] ?? '---'),
                 _buildGridItem(Icons.straighten, isVacio ? "Medida Cinta" : "Medida Nivel", safeNum(measurement['lectura_1_cinta_o_nivel'], 'mm')),

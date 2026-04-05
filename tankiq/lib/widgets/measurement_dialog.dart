@@ -18,6 +18,7 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
   List<dynamic> _tanks = [];
   bool _isLoadingTanks = true;
   String? _tankError;
+  final TextEditingController _motivoController = TextEditingController(text: 'Movimiento');
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
       if (_readingsControllers[2].text.isNotEmpty) {
         _showThirdReading = true;
       }
+      _motivoController.text = widget.initialData!['motivo'] ?? 'Movimiento';
     } else {
       _fetchTanks();
     }
@@ -110,21 +112,45 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
     _autoLevelController.dispose();
     _autoTempController.dispose();
     _inspectorController.dispose();
+    _motivoController.dispose();
     super.dispose();
   }
 
   void _checkThirdReadingNeeded() {
-    if (_readingsControllers[0].text.isNotEmpty && 
-        _readingsControllers[1].text.isNotEmpty) {
-      if (_readingsControllers[0].text != _readingsControllers[1].text) {
-        setState(() {
-          _showThirdReading = true;
-        });
-      } else {
+    if (_readingsControllers[0].text.isEmpty || 
+        _readingsControllers[1].text.isEmpty) {
+      setState(() {
+        _showThirdReading = false;
+      });
+      return;
+    }
+
+    if (_measurementType == 'VACIO') {
+      // For VACIO: Outage = Cinta - Plomada
+      if (_plomadaControllers[0].text.isEmpty || 
+          _plomadaControllers[1].text.isEmpty) {
         setState(() {
           _showThirdReading = false;
         });
+        return;
       }
+
+      final cinta1 = double.tryParse(_readingsControllers[0].text) ?? 0.0;
+      final plomada1 = double.tryParse(_plomadaControllers[0].text) ?? 0.0;
+      final outage1 = cinta1 - plomada1;
+
+      final cinta2 = double.tryParse(_readingsControllers[1].text) ?? 0.0;
+      final plomada2 = double.tryParse(_plomadaControllers[1].text) ?? 0.0;
+      final outage2 = cinta2 - plomada2;
+
+      setState(() {
+        _showThirdReading = (outage1 != outage2);
+      });
+    } else {
+      // For FONDO: Compare just the levels
+      setState(() {
+        _showThirdReading = (_readingsControllers[0].text != _readingsControllers[1].text);
+      });
     }
   }
 
@@ -285,10 +311,21 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildSectionHeader('Motivo de la Medición'),
+          TextFormField(
+            controller: _motivoController,
+            decoration: const InputDecoration(
+              hintText: 'Ej: Movimiento, Inventario, etc.',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            validator: (value) => value == null || value.isEmpty ? 'Requerido' : null,
+          ),
+          const SizedBox(height: 16),
           _buildSectionHeader('Lecturas Manuales ($readingLabel)'),
           Row(
             children: [
-              Expanded(child: _buildNumField(_readingsControllers[0], '$readingLabel 1', 20000, onChanged: _checkThirdReadingNeeded)),
+              Expanded(child: _buildNumField(_readingsControllers[0], '$readingLabel 1', 24000)),
               if (isVacio) ...[
                 const SizedBox(width: 8),
                 Expanded(child: _buildNumField(_plomadaControllers[0], 'Plomada 1', 150)),
@@ -298,10 +335,10 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildNumField(_readingsControllers[1], '$readingLabel 2', 20000, onChanged: _checkThirdReadingNeeded)),
+              Expanded(child: _buildNumField(_readingsControllers[1], '$readingLabel 2', 24000, onChanged: _checkThirdReadingNeeded)),
               if (isVacio) ...[
                 const SizedBox(width: 8),
-                Expanded(child: _buildNumField(_plomadaControllers[1], 'Plomada 2', 150)),
+                Expanded(child: _buildNumField(_plomadaControllers[1], 'Plomada 2', 150, onChanged: _checkThirdReadingNeeded)),
               ]
             ],
           ),
@@ -309,7 +346,7 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildNumField(_readingsControllers[2], '$readingLabel 3 (Requerido)', 20000)),
+                Expanded(child: _buildNumField(_readingsControllers[2], '$readingLabel 3 (Requerido)', 24000)),
                 if (isVacio) ...[
                   const SizedBox(width: 8),
                   Expanded(child: _buildNumField(_plomadaControllers[2], 'Plomada 3', 150)),
@@ -336,7 +373,7 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
           _buildSectionHeader('Lecturas Automáticas'),
            Row(
             children: [
-              Expanded(child: _buildNumField(_autoLevelController, 'Nivel Auto', 20000)),
+              Expanded(child: _buildNumField(_autoLevelController, 'Nivel Auto', 24000)),
               const SizedBox(width: 8),
               Expanded(child: _buildNumField(_autoTempController, 'Temp. Auto', 200)), // Limit?
             ],
@@ -454,6 +491,7 @@ class _MeasurementDialogState extends State<MeasurementDialog> {
                   'temperatura_automatica': _autoTempController.text.isNotEmpty
                       ? double.tryParse(_autoTempController.text)
                       : null,
+                  'motivo': _motivoController.text,
                 };
 
                 if (widget.initialData != null) {

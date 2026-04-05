@@ -433,7 +433,7 @@ class _MeasurementsScreenState extends State<MeasurementsScreen> {
                                 ],
                               ),
                               subtitle: Text(
-                                '${m['tipo_medicion']} - Insp: ${m['inspector']}\nOperador: ${m['operador_nombre'] ?? 'N/A'}\nNivel: ${NumberUtils.format(m['nivel_calculado_final'])} mm',
+                                '${m['tipo_medicion']} (${m['motivo'] ?? 'MOVIMIENTO'}) - Insp: ${m['inspector']}\nOperador: ${m['operador_nombre'] ?? 'N/A'}\nNivel: ${NumberUtils.format(m['nivel_calculado_final'])} mm',
                                 style: const TextStyle(color: Colors.white60),
                               ),
                               trailing: Row(

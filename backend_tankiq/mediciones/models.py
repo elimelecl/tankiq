@@ -91,15 +91,17 @@ class Medicion(models.Model):
         ('COMPLETADA', 'Completada'),
     ]
 
+
     tanque = models.ForeignKey(Tanque, on_delete=models.CASCADE, related_name='mediciones')
     operador = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     inspector = models.CharField(max_length=255)
     fecha_hora = models.DateTimeField()
     tipo_medicion = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    motivo = models.CharField(max_length=255, default='Movimiento', blank=True)
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, null=True, blank=True)
     
     temperatura_ambiente = models.FloatField(validators=[MinValueValidator(80), MaxValueValidator(135)])
-    nivel_automatico = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(22000)])
+    nivel_automatico = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(24000)])
     temperatura_automatica = models.FloatField()
 
     temp_liquido_superior = models.FloatField(validators=[MinValueValidator(80), MaxValueValidator(135)])
@@ -179,13 +181,20 @@ class Medicion(models.Model):
         if not self.producto and self.tanque.producto_actual:
             self.producto = self.tanque.producto_actual
         
-        lecturas = [self.lectura_1_cinta_o_nivel, self.lectura_2_cinta_o_nivel]
-        if self.lectura_3_cinta_o_nivel is not None: lecturas.append(self.lectura_3_cinta_o_nivel)
-        avg = sum(lecturas) / len(lecturas)
-        
         if self.tipo_medicion == 'VACIO':
-            self.nivel_calculado_final = self.tanque.altura_referencia - avg
+            # Outage = Cinta - Plomada
+            outages = [
+                (self.lectura_1_cinta_o_nivel - (self.lectura_1_plomada or 0)),
+                (self.lectura_2_cinta_o_nivel - (self.lectura_2_plomada or 0))
+            ]
+            if self.lectura_3_cinta_o_nivel is not None:
+                outages.append(self.lectura_3_cinta_o_nivel - (self.lectura_3_plomada or 0))
+            avg_outage = sum(outages) / len(outages)
+            self.nivel_calculado_final = self.tanque.altura_referencia - avg_outage
         else:
+            lecturas = [self.lectura_1_cinta_o_nivel, self.lectura_2_cinta_o_nivel]
+            if self.lectura_3_cinta_o_nivel is not None: lecturas.append(self.lectura_3_cinta_o_nivel)
+            avg = sum(lecturas) / len(lecturas)
             self.nivel_calculado_final = avg
 
         if self.estado == 'COMPLETADA' and self.api is not None and self.gsw is not None:
